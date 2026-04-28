@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RadiusIQ — Know Before You Buy</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#08090b;
+  --surface:#0f1014;
+  --surface2:#14151a;
+  --surface3:#1a1c23;
+  --border:#1e2028;
+  --border2:#262830;
+  --text:#f0f0f2;
+  --text2:#a8aab8;
+  --text3:#606270;
+  --gold:#c8922a;
+  --gold-light:#e8b84a;
+  --teal:#1ab88a;
+  --blue:#2e7fff;
+  --amber:#d97706;
+  --red:#e05252;
+  --sans:'DM Sans',sans-serif;
+  --serif:'Playfair Display',serif;
+  --mono:'DM Mono',monospace;
+  --panel-w:340px;
+  --nav-h:52px;
+  --strip-h:80px;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-thumb{background:var(--border2)}
+
+/* ── NAV ── */
+nav{
+position:fixed;top:0;left:0;right:0;z-index:500;
+height:var(–nav-h);
+background:rgba(8,9,11,0.96);
+border-bottom:1px solid var(–border);
+display:flex;align-items:center;justify-content:space-between;
+padding:0 24px;
+backdrop-filter:blur(20px);
+}
+.logo{
+font-family:var(–sans);font-size:15px;font-weight:600;
+letter-spacing:-0.01em;color:var(–text);
+display:flex;align-items:center;gap:1px;
+}
+.logo-radius{font-weight:700;color:var(–text)}
+.logo-iq{font-weight:300;color:var(–gold)}
+.nav-center{
+font-family:var(–mono);font-size:10px;
+color:var(–text3);letter-spacing:0.06em;
+display:flex;align-items:center;gap:8px;
+}
+.nav-pulse{
+width:6px;height:6px;border-radius:50%;
+background:var(–teal);
+box-shadow:0 0 6px var(–teal);
+animation:pulse 2.5s infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.nav-actions{display:flex;align-items:center;gap:10px}
+.btn{
+font-family:var(–sans);font-size:12px;font-weight:500;
+padding:8px 18px;cursor:pointer;border:none;
+letter-spacing:0.01em;transition:all .2s;
+}
+.btn-ghost{
+background:transparent;color:var(–text2);
+border:1px solid var(–border2);
+}
+.btn-ghost:hover{color:var(–text);border-color:var(–text3)}
+.btn-primary{background:var(–gold);color:#fff;font-weight:600}
+.btn-primary:hover{background:var(–gold-light)}
+
+/* ── LAYOUT ── */
+.app{
+position:fixed;top:var(–nav-h);left:0;right:0;
+bottom:0;display:flex;
+}
+
+/* ── MAP ── */
+.map-wrap{flex:1;position:relative}
+#map{width:100%;height:100%}
+.leaflet-tile{filter:brightness(0.88) saturate(0.5) contrast(1.05)}
+.leaflet-container{background:#0d0f14}
+.leaflet-control-zoom{border:1px solid var(–border2)!important;background:var(–surface)!important;border-radius:0!important}
+.leaflet-control-zoom a{background:var(–surface)!important;color:var(–text2)!important;border-bottom:1px solid var(–border)!important;border-radius:0!important;line-height:26px!important}
+.leaflet-control-zoom a:hover{background:var(–surface2)!important;color:var(–text)!important}
+.leaflet-control-attribution{background:rgba(8,9,11,0.8)!important;color:var(–text3)!important;font-size:9px!important}
+.leaflet-control-attribution a{color:var(–text3)!important}
+
+/* ── BUBBLE MARKERS ── */
+.nbhd-bubble{
+border-radius:50%;
+display:flex;flex-direction:column;align-items:center;justify-content:center;
+cursor:pointer;
+transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;
+border:1.5px solid rgba(255,255,255,0.08);
+gap:1px;
+}
+.nbhd-bubble:hover{transform:scale(1.12)!important;z-index:1000!important}
+.nbhd-bubble.pinned{border-width:2px;border-style:dashed}
+.nbhd-bubble.active{transform:scale(1.15)!important;z-index:1001!important}
+.nb-score{font-family:var(–mono);font-weight:500;color:#fff;line-height:1}
+.nb-abbr{font-family:var(–mono);color:rgba(255,255,255,0.45);line-height:1}
+
+.nb-s{background:radial-gradient(135deg,#132e20,#071510);border-color:rgba(26,184,138,0.45);box-shadow:0 4px 20px rgba(0,0,0,0.5),0 0 20px rgba(26,184,138,0.15)}
+.nb-a{background:radial-gradient(135deg,#0f1e36,#060d1c);border-color:rgba(46,127,255,0.45);box-shadow:0 4px 20px rgba(0,0,0,0.5),0 0 20px rgba(46,127,255,0.15)}
+.nb-b{background:radial-gradient(135deg,#261a08,#130d04);border-color:rgba(200,146,42,0.45);box-shadow:0 4px 20px rgba(0,0,0,0.5),0 0 16px rgba(200,146,42,0.12)}
+.nb-c{background:radial-gradient(135deg,#221208,#110804);border-color:rgba(217,119,6,0.4);box-shadow:0 4px 20px rgba(0,0,0,0.5),0 0 14px rgba(217,119,6,0.1)}
+
+/* ── BOTTOM HOVER STRIP ── */
+.bottom-strip{
+position:absolute;
+bottom:0;left:0;right:0;
+height:var(–strip-h);
+z-index:400;
+background:linear-gradient(to top, rgba(8,9,11,0.98) 0%, rgba(8,9,11,0.0) 100%);
+pointer-events:none;
+transition:opacity .2s;
+}
+.strip-card{
+position:absolute;
+bottom:12px;
+left:50%;transform:translateX(-50%);
+background:rgba(15,16,20,0.98);
+border:1px solid var(–border2);
+display:flex;align-items:center;gap:20px;
+padding:12px 24px;
+min-width:420px;max-width:640px;
+pointer-events:all;
+opacity:0;
+transform:translateX(-50%) translateY(8px);
+transition:opacity .25s, transform .25s;
+backdrop-filter:blur(16px);
+box-shadow:0 8px 40px rgba(0,0,0,0.6);
+cursor:pointer;
+}
+.strip-card.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.sc-score{
+font-family:var(–mono);font-size:32px;font-weight:500;
+line-height:1;flex-shrink:0;
+}
+.sc-divider{width:1px;height:36px;background:var(–border2);flex-shrink:0}
+.sc-info{flex:1;min-width:0}
+.sc-name{font-family:var(–serif);font-size:16px;font-style:italic;color:var(–text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-meta{font-size:11px;color:var(–text3);font-family:var(–mono);display:flex;gap:14px;flex-wrap:wrap}
+.sc-meta span{display:flex;align-items:center;gap:4px}
+.sc-action{
+font-size:11px;font-weight:600;color:var(–gold);
+letter-spacing:0.04em;text-transform:uppercase;
+white-space:nowrap;flex-shrink:0;
+font-family:var(–sans);
+}
+.sc-pin-btn{
+width:28px;height:28px;border-radius:50%;
+background:var(–surface2);border:1px solid var(–border2);
+cursor:pointer;display:flex;align-items:center;justify-content:center;
+font-size:11px;color:var(–text3);
+transition:all .15s;flex-shrink:0;
+}
+.sc-pin-btn:hover{background:var(–surface3);color:var(–text);border-color:var(–gold)}
+.sc-pin-btn.pinned{background:rgba(200,146,42,0.15);border-color:var(–gold);color:var(–gold)}
+
+/* ── COMPARE BAR ── */
+.compare-bar{
+position:absolute;bottom:96px;left:50%;transform:translateX(-50%);
+z-index:400;
+background:rgba(15,16,20,0.96);
+border:1px solid var(–border2);
+padding:8px 16px;
+display:flex;align-items:center;gap:12px;
+backdrop-filter:blur(16px);
+opacity:0;pointer-events:none;
+transition:opacity .25s;
+box-shadow:0 4px 24px rgba(0,0,0,0.5);
+}
+.compare-bar.show{opacity:1;pointer-events:all}
+.cb-label{font-family:var(–mono);font-size:10px;color:var(–text3);letter-spacing:0.08em;text-transform:uppercase;white-space:nowrap}
+.cb-slots{display:flex;gap:8px}
+.cb-slot{
+font-family:var(–sans);font-size:11px;font-weight:500;
+padding:4px 12px;
+border:1px solid var(–border2);
+background:var(–surface2);color:var(–text2);
+display:flex;align-items:center;gap:6px;
+min-width:100px;
+}
+.cb-slot.filled{border-color:var(–gold);color:var(–text)}
+.cb-slot .cb-x{cursor:pointer;color:var(–text3);margin-left:4px;transition:color .15s}
+.cb-slot .cb-x:hover{color:var(–red)}
+.cb-btn{
+font-family:var(–sans);font-size:11px;font-weight:600;
+padding:6px 16px;background:var(–gold);color:#fff;
+border:none;cursor:pointer;white-space:nowrap;
+transition:background .15s;
+}
+.cb-btn:hover{background:var(–gold-light)}
+.cb-btn:disabled{opacity:0.4;cursor:default}
+
+/* ── MAP LEGEND ── */
+.map-legend{
+position:absolute;bottom:96px;left:16px;z-index:400;
+background:rgba(15,16,20,0.94);
+border:1px solid var(–border);
+padding:12px 16px;
+pointer-events:none;
+}
+.leg-title{font-family:var(–mono);font-size:9px;letter-spacing:0.12em;color:var(–text3);text-transform:uppercase;margin-bottom:8px}
+.leg-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:11px;color:var(–text3)}
+.leg-row:last-child{margin-bottom:0}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* ── RIGHT PANEL ── */
+.rpanel{
+width:var(–panel-w);flex-shrink:0;
+border-left:1px solid var(–border);
+background:var(–surface);
+display:flex;flex-direction:column;
+overflow:hidden;
+transition:width .3s;
+}
+
+/* Default state — minimal */
+.rp-home{
+display:flex;flex-direction:column;
+height:100%;padding:32px 28px;
+}
+.rp-home-top{flex:1;display:flex;flex-direction:column;justify-content:center}
+.rp-tagline{
+font-family:var(–serif);font-style:italic;
+font-size:28px;line-height:1.2;
+color:var(–text);margin-bottom:14px;
+}
+.rp-tagline em{font-style:normal;color:var(–gold)}
+.rp-sub{font-size:13px;color:var(–text2);line-height:1.7;margin-bottom:32px}
+.rp-hint{
+font-family:var(–mono);font-size:10px;
+color:var(–text3);letter-spacing:0.06em;
+display:flex;align-items:center;gap:8px;
+}
+.rp-hint::before{content:’’;display:block;width:16px;height:1px;background:var(–border2)}
+
+/* Stats summary */
+.rp-stats{
+display:grid;grid-template-columns:1fr 1fr;gap:1px;
+background:var(–border);border:1px solid var(–border);
+margin-bottom:24px;
+}
+.rp-stat{
+background:var(–surface);padding:14px 16px;
+}
+.rp-stat-val{font-family:var(–mono);font-size:20px;font-weight:500;margin-bottom:2px}
+.rp-stat-label{font-size:10px;color:var(–text3);font-family:var(–mono);letter-spacing:0.06em;text-transform:uppercase}
+
+/* How it works — minimal */
+.rp-steps{margin-top:auto;padding-top:24px;border-top:1px solid var(–border)}
+.rp-step{display:flex;gap:12px;margin-bottom:14px;align-items:flex-start}
+.rp-step:last-child{margin-bottom:0}
+.step-n{
+font-family:var(–mono);font-size:10px;color:var(–gold);
+width:18px;flex-shrink:0;margin-top:2px;
+}
+.step-txt{font-size:12px;color:var(–text2);line-height:1.6}
+.step-txt strong{color:var(–text);font-weight:500}
+
+/* ── DETAIL PANEL ── */
+.rp-detail{display:none;flex-direction:column;height:100%}
+.rp-detail-top{
+padding:20px 24px 16px;
+border-bottom:1px solid var(–border);
+}
+.back-link{
+font-family:var(–mono);font-size:10px;letter-spacing:0.06em;
+color:var(–text3);text-transform:uppercase;
+background:none;border:none;cursor:pointer;
+display:flex;align-items:center;gap:6px;
+margin-bottom:14px;padding:0;
+transition:color .15s;
+}
+.back-link:hover{color:var(–text)}
+.detail-name{
+font-family:var(–serif);font-size:22px;font-style:italic;
+color:var(–text);line-height:1.2;margin-bottom:4px;
+}
+.detail-location{font-family:var(–mono);font-size:10px;color:var(–text3);letter-spacing:0.06em}
+
+/* Score block */
+.score-block{
+padding:16px 24px;border-bottom:1px solid var(–border);
+display:flex;align-items:center;gap:16px;
+}
+.score-num{
+font-family:var(–mono);font-size:48px;font-weight:500;
+line-height:1;flex-shrink:0;
+}
+.score-right{flex:1}
+.score-tier{
+font-size:11px;font-weight:600;letter-spacing:0.06em;
+text-transform:uppercase;margin-bottom:6px;display:inline-block;
+padding:2px 8px;font-family:var(–sans);
+}
+.score-verdict{font-size:13px;color:var(–text2);line-height:1.6;font-family:var(–serif);font-style:italic}
+
+/* Tags */
+.detail-tags{
+padding:12px 24px;border-bottom:1px solid var(–border);
+display:flex;flex-wrap:wrap;gap:6px;
+}
+.dtag{
+font-family:var(–mono);font-size:10px;
+padding:3px 10px;border:1px solid var(–border2);
+color:var(–text3);background:var(–surface2);
+letter-spacing:0.04em;
+}
+.dtag.hot{border-color:rgba(200,146,42,0.35);color:var(–gold);background:rgba(200,146,42,0.08)}
+
+/* Detail scroll */
+.detail-scroll{flex:1;overflow-y:auto;padding:20px 24px 100px}
+.ds-block{margin-bottom:28px}
+.ds-heading{
+font-size:10px;font-weight:600;letter-spacing:0.1em;
+text-transform:uppercase;color:var(–text3);
+margin-bottom:12px;font-family:var(–mono);
+display:flex;align-items:center;gap:10px;
+}
+.ds-heading::after{content:’’;flex:1;height:1px;background:var(–border)}
+
+/* Key numbers grid */
+.kn-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kn-box{background:var(–surface2);border:1px solid var(–border);padding:14px}
+.kn-val{font-family:var(–mono);font-size:20px;font-weight:500;color:var(–text);margin-bottom:3px}
+.kn-label{font-size:10px;color:var(–text3);font-family:var(–mono);letter-spacing:0.04em}
+.kn-trend{font-size:10px;margin-top:4px;font-family:var(–mono)}
+.trend-up{color:var(–teal)}.trend-dn{color:var(–red)}.trend-fl{color:var(–text3)}
+
+/* Demand bars */
+.demand-bar{margin-bottom:10px}
+.db-row{display:flex;justify-content:space-between;margin-bottom:4px}
+.db-label{font-size:11px;color:var(–text2)}.db-val{font-family:var(–mono);font-size:11px;color:var(–text);font-weight:500}
+.db-track{height:2px;background:var(–border2);position:relative}
+.db-fill{position:absolute;top:0;left:0;height:100%}
+
+/* Signals */
+.signal-list{display:flex;flex-direction:column;gap:8px}
+.signal-item{
+display:flex;gap:10px;
+background:var(–surface2);border:1px solid var(–border);
+padding:12px;
+}
+.signal-ico{
+width:16px;height:16px;flex-shrink:0;margin-top:1px;
+display:flex;align-items:center;justify-content:center;
+}
+.signal-ico svg{width:10px;height:10px}
+.signal-text{font-size:12px;color:var(–text2);line-height:1.6}
+.signal-text strong{color:var(–text);font-weight:500}
+
+/* Locked */
+.locked-block{position:relative;margin-top:20px}
+.locked-inner{filter:blur(4px);pointer-events:none;user-select:none;opacity:0.4}
+.locked-gate{
+position:absolute;inset:0;
+display:flex;flex-direction:column;align-items:center;justify-content:center;
+gap:8px;
+}
+.lock-label{
+font-family:var(–mono);font-size:10px;letter-spacing:0.1em;
+text-transform:uppercase;color:var(–gold);
+border:1px solid rgba(200,146,42,0.3);
+background:rgba(200,146,42,0.08);
+padding:4px 14px;
+}
+.lock-sub{font-size:11px;color:var(–text3);text-align:center;font-family:var(–mono)}
+
+/* CTA fixed */
+.detail-cta{
+position:absolute;bottom:0;left:0;right:0;
+padding:16px 24px 20px;
+background:linear-gradient(to top,var(–surface) 65%,transparent);
+z-index:10;
+}
+.cta-btn{
+width:100%;padding:13px;
+background:var(–gold);color:#fff;
+font-family:var(–sans);font-size:12px;font-weight:600;
+letter-spacing:0.04em;text-transform:uppercase;
+border:none;cursor:pointer;
+display:flex;align-items:center;justify-content:space-between;
+transition:background .15s;
+}
+.cta-btn:hover{background:var(–gold-light)}
+.cta-btn-price{font-family:var(–mono);font-size:11px;font-weight:400;opacity:0.85}
+
+/* ── COMPARE VIEW ── */
+.rp-compare{display:none;flex-direction:column;height:100%}
+.compare-header{
+padding:20px 24px 16px;
+border-bottom:1px solid var(–border);
+display:flex;align-items:center;justify-content:space-between;
+}
+.compare-title{font-family:var(–serif);font-style:italic;font-size:18px;color:var(–text)}
+.compare-close{
+font-family:var(–mono);font-size:10px;color:var(–text3);
+background:none;border:none;cursor:pointer;letter-spacing:0.06em;
+text-transform:uppercase;transition:color .15s;
+}
+.compare-close:hover{color:var(–text)}
+.compare-scroll{flex:1;overflow-y:auto;padding:16px 24px 80px}
+.compare-col-headers{
+display:grid;gap:8px;margin-bottom:16px;
+}
+.cch{
+font-family:var(–serif);font-style:italic;font-size:13px;
+color:var(–text);padding:10px 12px;
+background:var(–surface2);border:1px solid var(–border);
+display:flex;align-items:center;justify-content:space-between;
+}
+.cch-score{font-family:var(–mono);font-size:16px;font-weight:500}
+.compare-row{margin-bottom:16px}
+.cr-label{
+font-family:var(–mono);font-size:9px;letter-spacing:0.1em;
+color:var(–text3);text-transform:uppercase;
+margin-bottom:6px;display:flex;align-items:center;gap:8px;
+}
+.cr-label::after{content:’’;flex:1;height:1px;background:var(–border)}
+.cr-cells{display:grid;gap:8px}
+.cr-cell{
+background:var(–surface2);border:1px solid var(–border);
+padding:10px 12px;
+}
+.cr-val{font-family:var(–mono);font-size:14px;font-weight:500;color:var(–text)}
+.cr-sub{font-size:10px;color:var(–text3);font-family:var(–mono);margin-top:2px}
+.cr-cell.best{border-color:rgba(26,184,138,0.4);background:rgba(26,184,138,0.05)}
+.cr-cell.best .cr-val{color:var(–teal)}
+.compare-cta{
+position:absolute;bottom:0;left:0;right:0;
+padding:14px 24px 18px;
+background:linear-gradient(to top,var(–surface) 65%,transparent);
+}
+.compare-cta-btn{
+width:100%;padding:13px;background:var(–gold);color:#fff;
+font-family:var(–sans);font-size:12px;font-weight:600;
+letter-spacing:0.04em;text-transform:uppercase;
+border:none;cursor:pointer;transition:background .15s;
+}
+.compare-cta-btn:hover{background:var(–gold-light)}
+
+/* ── MODALS ── */
+.modal-bg{
+position:fixed;inset:0;z-index:1000;
+background:rgba(8,9,11,0.88);backdrop-filter:blur(8px);
+display:flex;align-items:center;justify-content:center;
+opacity:0;pointer-events:none;transition:opacity .25s;
+}
+.modal-bg.open{opacity:1;pointer-events:all}
+.modal{
+background:var(–surface);border:1px solid var(–border2);
+width:min(440px,92vw);padding:36px;
+transform:translateY(12px);transition:transform .25s;
+position:relative;
+}
+.modal-bg.open .modal{transform:translateY(0)}
+.modal-x{
+position:absolute;top:14px;right:14px;
+background:none;border:none;color:var(–text3);
+font-size:16px;cursor:pointer;line-height:1;transition:color .15s;
+}
+.modal-x:hover{color:var(–text)}
+.modal-eyebrow{
+font-family:var(–mono);font-size:9px;letter-spacing:0.15em;
+color:var(–gold);text-transform:uppercase;margin-bottom:10px;
+}
+.modal-title{
+font-family:var(–serif);font-style:italic;
+font-size:24px;line-height:1.2;margin-bottom:8px;
+}
+.modal-body{font-size:12px;color:var(–text2);line-height:1.7;margin-bottom:24px}
+.modal-body strong{color:var(–text);font-weight:500}
+.field{margin-bottom:14px}
+.field label{
+display:block;font-family:var(–mono);font-size:9px;
+letter-spacing:0.1em;color:var(–text3);
+text-transform:uppercase;margin-bottom:6px;
+}
+.field input,.field select{
+width:100%;padding:10px 14px;
+background:var(–surface2);border:1px solid var(–border2);
+color:var(–text);font-family:var(–sans);font-size:13px;
+outline:none;transition:border-color .15s;appearance:none;
+}
+.field input:focus,.field select:focus{border-color:var(–gold)}
+.field input::placeholder{color:var(–text3)}
+.modal-btn{
+width:100%;padding:13px;background:var(–gold);color:#fff;
+font-family:var(–sans);font-size:12px;font-weight:600;
+letter-spacing:0.04em;text-transform:uppercase;
+border:none;cursor:pointer;transition:background .15s;margin-top:4px;
+}
+.modal-btn:hover{background:var(–gold-light)}
+.modal-fine{
+font-family:var(–mono);font-size:9px;color:var(–text3);
+text-align:center;margin-top:10px;line-height:1.6;
+}
+
+/* Pricing */
+.price-toggle{display:flex;gap:8px;margin-bottom:20px}
+.pt-opt{
+flex:1;padding:14px 12px;border:1px solid var(–border2);
+background:var(–surface2);cursor:pointer;transition:border-color .15s;
+position:relative;
+}
+.pt-opt.sel{border-color:var(–gold);background:rgba(200,146,42,0.06)}
+.pt-opt.sel::after{
+content:’’;position:absolute;top:6px;right:6px;
+width:6px;height:6px;border-radius:50%;background:var(–gold);
+}
+.pt-name{font-family:var(–mono);font-size:9px;letter-spacing:0.08em;color:var(–text3);text-transform:uppercase;margin-bottom:6px}
+.pt-price{font-family:var(–mono);font-size:22px;font-weight:500;color:var(–text);line-height:1}
+.pt-price small{font-size:10px;color:var(–text3);font-weight:400}
+.pt-desc{font-size:10px;color:var(–text3);margin-top:5px;line-height:1.5}
+.feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:20px}
+.feat-item{
+font-size:10px;color:var(–text2);
+padding:7px 10px;background:var(–surface2);
+border:1px solid var(–border);
+display:flex;align-items:center;gap:6px;
+font-family:var(–mono);
+}
+.feat-check{color:var(–teal);font-size:10px}
+
+/* Success */
+.success-state{display:none;text-align:center;padding:8px 0}
+.ss-icon{
+width:52px;height:52px;border-radius:50%;
+background:rgba(200,146,42,0.1);border:1px solid rgba(200,146,42,0.3);
+display:flex;align-items:center;justify-content:center;
+margin:0 auto 20px;
+}
+.ss-title{font-family:var(–serif);font-style:italic;font-size:24px;margin-bottom:8px}
+.ss-body{font-size:12px;color:var(–text2);line-height:1.7;margin-bottom:20px}
+.ss-window{
+background:var(–surface2);border:1px solid var(–border2);
+padding:12px 16px;
+display:flex;align-items:center;justify-content:space-between;
+}
+.ss-window-label{font-family:var(–mono);font-size:9px;color:var(–text3);letter-spacing:0.08em;text-transform:uppercase}
+.ss-window-val{font-family:var(–mono);font-size:11px;color:var(–teal);font-weight:500}
+
+@media(max-width:768px){
+:root{–panel-w:100%}
+.rpanel{display:none}
+.strip-card{min-width:calc(100vw - 32px);max-width:calc(100vw - 32px)}
+.compare-bar{left:16px;right:16px;transform:none;bottom:100px}
+.compare-bar.show{transform:none}
+}
+</style>
+
+</head>
+<body>
+
+<nav>
+  <div class="logo">
+    <span class="logo-radius">Radius</span><span class="logo-iq">IQ</span>
+  </div>
+  <div class="nav-center">
+    <div class="nav-pulse"></div>
+    Orlando · Q2 2026
+  </div>
+  <div class="nav-actions">
+    <button class="btn btn-ghost" onclick="openEmail()">Free Access</button>
+    <button class="btn btn-primary" onclick="openPricing()">Unlock Intel</button>
+  </div>
+</nav>
+
+<div class="app">
+
+  <div class="map-wrap">
+    <div id="map"></div>
+
+```
+<!-- Bottom hover strip -->
+<div class="bottom-strip">
+  <div class="strip-card" id="stripCard" onclick="handleStripClick()">
+    <div class="sc-score" id="sc-score"></div>
+    <div class="sc-divider"></div>
+    <div class="sc-info">
+      <div class="sc-name" id="sc-name"></div>
+      <div class="sc-meta" id="sc-meta"></div>
+    </div>
+    <button class="sc-pin-btn" id="sc-pin-btn" onclick="handlePinClick(event)" title="Compare">+</button>
+    <div class="sc-action">View →</div>
+  </div>
+</div>
+
+<!-- Compare bar -->
+<div class="compare-bar" id="compareBar">
+  <div class="cb-label">Compare</div>
+  <div class="cb-slots" id="cbSlots"></div>
+  <button class="cb-btn" id="cbBtn" onclick="openCompare()" disabled>View Side by Side</button>
+</div>
+
+<!-- Legend -->
+<div class="map-legend">
+  <div class="leg-title">Invest Score</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--teal)"></div><span style="color:var(--teal);font-weight:600;font-family:var(--mono);font-size:10px">S</span>&nbsp;90–100</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--blue)"></div><span style="color:var(--blue);font-weight:600;font-family:var(--mono);font-size:10px">A</span>&nbsp;75–89</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--gold)"></div><span style="color:var(--gold);font-weight:600;font-family:var(--mono);font-size:10px">B</span>&nbsp;60–74</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--amber)"></div><span style="color:var(--amber);font-weight:600;font-family:var(--mono);font-size:10px">C</span>&nbsp;Below 60</div>
+</div>
+```
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+
+  <div class="rpanel" id="rpanel">
+
+```
+<!-- HOME STATE -->
+<div class="rp-home" id="rpHome">
+  <div class="rp-home-top">
+    <div class="rp-tagline">Know before<br>you <em>buy.</em></div>
+    <div class="rp-sub">Every neighborhood has a story. We translate it into one number — and the signals behind it.</div>
+
+    <div class="rp-stats">
+      <div class="rp-stat">
+        <div class="rp-stat-val" style="color:var(--teal)">14</div>
+        <div class="rp-stat-label">Neighborhoods</div>
+      </div>
+      <div class="rp-stat">
+        <div class="rp-stat-val" style="color:var(--gold)">6</div>
+        <div class="rp-stat-label">Data Signals</div>
+      </div>
+      <div class="rp-stat">
+        <div class="rp-stat-val" style="color:var(--blue)">Q2</div>
+        <div class="rp-stat-label">2026 Data</div>
+      </div>
+      <div class="rp-stat">
+        <div class="rp-stat-val" style="color:var(--text2)">3</div>
+        <div class="rp-stat-label">Max Compare</div>
+      </div>
+    </div>
+
+    <div class="rp-hint">Hover any neighborhood to preview</div>
+  </div>
+
+  <div class="rp-steps">
+    <div class="rp-step">
+      <div class="step-n">01</div>
+      <div class="step-txt"><strong>Browse free.</strong> Every score visible. Hover for a snapshot.</div>
+    </div>
+    <div class="rp-step">
+      <div class="step-n">02</div>
+      <div class="step-txt"><strong>Click to read the story</strong> behind a neighborhood — free with email.</div>
+    </div>
+    <div class="rp-step">
+      <div class="step-n">03</div>
+      <div class="step-txt"><strong>Compare up to 3</strong> side by side. Unlock the full picture from $129.</div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL STATE -->
+<div class="rp-detail" id="rpDetail">
+  <div class="rp-detail-top">
+    <button class="back-link" onclick="showHome()">&#8592; All Neighborhoods</button>
+    <div class="detail-name" id="d-name"></div>
+    <div class="detail-location">Orlando Metro &middot; Q2 2026</div>
+  </div>
+
+  <div class="score-block">
+    <div class="score-num" id="d-score"></div>
+    <div class="score-right">
+      <div class="score-tier" id="d-tier"></div>
+      <div class="score-verdict" id="d-verdict"></div>
+    </div>
+  </div>
+
+  <div class="detail-tags" id="d-tags"></div>
+
+  <div class="detail-scroll">
+
+    <div class="ds-block">
+      <div class="ds-heading">Key Numbers</div>
+      <div class="kn-grid" id="d-metrics"></div>
+    </div>
+
+    <div class="ds-block">
+      <div class="ds-heading">Who's Coming</div>
+      <div id="d-demand"></div>
+    </div>
+
+    <div class="ds-block">
+      <div class="ds-heading">Why It's Sticky</div>
+      <div class="signal-list" id="d-signals"></div>
+    </div>
+
+    <div class="locked-block">
+      <div class="locked-inner">
+        <div class="ds-block">
+          <div class="ds-heading">Growth Trajectory</div>
+          <div class="kn-grid">
+            <div class="kn-box"><div class="kn-val">$48.2K</div><div class="kn-label">Annual Revenue</div><div class="kn-trend trend-up">&#8593; 18% YoY</div></div>
+            <div class="kn-box"><div class="kn-val">2.4 yrs</div><div class="kn-label">Break-Even</div><div class="kn-trend trend-fl">Stable</div></div>
+            <div class="kn-box"><div class="kn-val">31.4</div><div class="kn-label">Median Age</div><div class="kn-trend trend-up">Trending younger</div></div>
+            <div class="kn-box"><div class="kn-val">$68K</div><div class="kn-label">Median Income</div><div class="kn-trend trend-up">&#8593; 9%</div></div>
+          </div>
+        </div>
+        <div class="ds-block">
+          <div class="ds-heading">Regulatory Risk</div>
+          <div class="kn-grid">
+            <div class="kn-box"><div class="kn-val">Low</div><div class="kn-label">Permit Risk</div></div>
+            <div class="kn-box"><div class="kn-val">Active</div><div class="kn-label">STR Permits</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="locked-gate">
+        <div class="lock-label">Full Intel Locked</div>
+        <div class="lock-sub">Growth trends &middot; Demographics<br>Regulatory risk &middot; Yield projections</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="detail-cta">
+    <button class="cta-btn" onclick="openPricing()">
+      <span>Unlock Full Analysis</span>
+      <span class="cta-btn-price">From $129</span>
+    </button>
+  </div>
+</div>
+
+<!-- COMPARE STATE -->
+<div class="rp-compare" id="rpCompare">
+  <div class="compare-header">
+    <div class="compare-title">Side by Side</div>
+    <button class="compare-close" onclick="showHome()">&#8592; Back</button>
+  </div>
+  <div class="compare-scroll" id="compareScroll"></div>
+  <div class="compare-cta">
+    <button class="compare-cta-btn" onclick="openPricing()">Unlock Full Comparison — From $249</button>
+  </div>
+</div>
+```
+
+  </div>
+</div>
+
+<!-- EMAIL MODAL -->
+
+<div class="modal-bg" id="emailModal">
+  <div class="modal">
+    <button class="modal-x" onclick="closeModal('emailModal')">&#10005;</button>
+    <div class="modal-eyebrow">Free Access</div>
+    <div class="modal-title">See the full story.</div>
+    <div class="modal-body">Free access to neighborhood signals, investment scores, and market trends across Orlando. <strong>No card required.</strong></div>
+    <div class="field"><label>Email</label><input type="email" placeholder="you@email.com" id="ei-email"></div>
+    <div class="field">
+      <label>I'm looking to...</label>
+      <select id="ei-role">
+        <option value="">Select one</option>
+        <option>Buy a home to live in</option>
+        <option>Buy as a short-term rental investment</option>
+        <option>Buy as a long-term rental investment</option>
+        <option>Flip or wholesale</option>
+        <option>Just researching neighborhoods</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Timeline</label>
+      <select id="ei-timeline">
+        <option value="">When are you looking to buy?</option>
+        <option>Within 3 months</option>
+        <option>3–6 months</option>
+        <option>6–12 months</option>
+        <option>Just exploring for now</option>
+      </select>
+    </div>
+    <button class="modal-btn" onclick="submitEmail()">Access the Map Free &#8594;</button>
+    <div class="modal-fine">No spam &middot; Unsubscribe any time</div>
+  </div>
+</div>
+
+<!-- PRICING MODAL -->
+
+<div class="modal-bg" id="pricingModal">
+  <div class="modal">
+    <button class="modal-x" onclick="closeModal('pricingModal')">&#10005;</button>
+    <div id="pricingView">
+      <div class="modal-eyebrow">Unlock Intelligence</div>
+      <div class="modal-title">Full market access.</div>
+      <div class="modal-body">Revenue projections &middot; Demographics &middot; Ordinance risk &middot; Growth trends</div>
+      <div class="price-toggle">
+        <div class="pt-opt" id="pt1" onclick="selectPlan(1)">
+          <div class="pt-name">Single Market</div>
+          <div class="pt-price">$129<small>/once</small></div>
+          <div class="pt-desc">1 neighborhood deep-dive</div>
+        </div>
+        <div class="pt-opt sel" id="pt2" onclick="selectPlan(2)">
+          <div class="pt-name">3-Market Bundle</div>
+          <div class="pt-price">$249<small>/once</small></div>
+          <div class="pt-desc">Compare 3 neighborhoods</div>
+        </div>
+      </div>
+      <div class="feat-grid">
+        <div class="feat-item"><span class="feat-check">&#10003;</span>Revenue projections</div>
+        <div class="feat-item"><span class="feat-check">&#10003;</span>Occupancy trends</div>
+        <div class="feat-item"><span class="feat-check">&#10003;</span>Demographic intel</div>
+        <div class="feat-item"><span class="feat-check">&#10003;</span>Ordinance risk</div>
+        <div class="feat-item"><span class="feat-check">&#10003;</span>Walkability &amp; safety</div>
+        <div class="feat-item"><span class="feat-check">&#10003;</span>Growth trajectory</div>
+      </div>
+      <div class="field"><label>Your Email</label><input type="email" placeholder="you@email.com" id="pi-email"></div>
+      <button class="modal-btn" onclick="submitOrder()">Get Access &middot; <span id="pi-price">$249</span> &#8594;</button>
+      <div class="modal-fine">Secure checkout via Stripe &middot; Instant access link</div>
+    </div>
+    <div class="success-state" id="successView">
+      <div class="ss-icon">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <circle cx="10" cy="10" r="9" stroke="#c8922a" stroke-width="1.5"/>
+          <circle cx="10" cy="10" r="4" stroke="#c8922a" stroke-width="1" opacity="0.5"/>
+          <circle cx="10" cy="10" r="1.5" fill="#c8922a"/>
+          <line x1="10" y1="1" x2="10" y2="5" stroke="#c8922a" stroke-width="1.5"/>
+          <line x1="10" y1="15" x2="10" y2="19" stroke="#c8922a" stroke-width="1.5"/>
+          <line x1="1" y1="10" x2="5" y2="10" stroke="#c8922a" stroke-width="1.5"/>
+          <line x1="15" y1="10" x2="19" y2="10" stroke="#c8922a" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="ss-title">Access confirmed.</div>
+      <div class="ss-body">Your access link is on its way to your inbox.</div>
+      <div class="ss-window">
+        <div class="ss-window-label">Access Window</div>
+        <div class="ss-window-val" id="expiryDate"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const N = [
+  {id:1,name:"International Drive",abbr:"I-DR",tier:"s",score:94,lat:28.4312,lng:-81.4712,sz:70,rate:"$189",occ:"82%",rev:"$56,400",risk:"Low",verdict:"Florida's premier tourist corridor. Near-zero vacancy risk driven by theme park demand and convention traffic.",pills:["Tourist Anchor","High Demand","Convention Hub"],hot:[0,1],metrics:[{v:"$189",l:"Avg Nightly",t:"↑ 11% YoY",d:"up"},{v:"82%",l:"Occupancy",t:"↑ 4pts YoY",d:"up"},{v:"$56,400",l:"Est. Annual Rev",t:"↑ 16% YoY",d:"up"},{v:"1.8 yrs",l:"Break-Even",t:"Best in market",d:"up"}],demand:[{l:"Tourism",p:72,c:"var(--teal)"},{l:"Convention",p:18,c:"var(--blue)"},{l:"Extended Stay",p:10,c:"var(--gold)"}],signals:[{w:false,t:"<strong>Universal & Disney</strong> — 3–8 miles. Structurally permanent demand floor."},{w:false,t:"<strong>Orange County Convention Center</strong> — 1.4M+ annual attendees fills shoulder seasons."},{w:false,t:"<strong>MCO Airport 15 min</strong> — strong international traveler access."}]},
+  {id:2,name:"UCF Corridor",abbr:"UCF",tier:"s",score:91,lat:28.6024,lng:-81.2001,sz:64,rate:"$112",occ:"88%",rev:"$42,800",risk:"Low",verdict:"72,000-student university anchor creates the most reliably sticky tenant base in the southeast.",pills:["University Anchor","Sticky Tenants","High Occupancy"],hot:[0,1,2],metrics:[{v:"$112",l:"Avg Nightly",t:"↑ 8% YoY",d:"up"},{v:"88%",l:"Occupancy",t:"Consistent",d:"fl"},{v:"$42,800",l:"Est. Annual Rev",t:"↑ 12% YoY",d:"up"},{v:"2.1 yrs",l:"Break-Even",t:"Strong yield",d:"up"}],demand:[{l:"University",p:58,c:"var(--blue)"},{l:"Young Professional",p:28,c:"var(--teal)"},{l:"Family / Visiting",p:14,c:"var(--gold)"}],signals:[{w:false,t:"<strong>UCF — 72,000 students</strong>, largest US university. Demand is academic-calendar locked."},{w:false,t:"<strong>91% lease renewal rate</strong> in adjacent housing. Highest stickiness in Orlando."},{w:false,t:"<strong>Research Park growth</strong> — young professionals staying post-graduation."}]},
+  {id:3,name:"Lake Nona",abbr:"NONA",tier:"s",score:88,lat:28.3561,lng:-81.2256,sz:60,rate:"$148",occ:"79%",rev:"$47,200",risk:"Low",verdict:"Medical City master plan. Young affluent demographic, fastest-appreciating asset base in the metro.",pills:["Medical City","Fast Growing","Low Supply"],hot:[0,2],metrics:[{v:"$148",l:"Avg Nightly",t:"↑ 14% YoY",d:"up"},{v:"79%",l:"Occupancy",t:"↑ 6pts YoY",d:"up"},{v:"$47,200",l:"Est. Annual Rev",t:"Fastest growing",d:"up"},{v:"2.4 yrs",l:"Break-Even",t:"Improving",d:"up"}],demand:[{l:"Medical / Healthcare",p:44,c:"var(--teal)"},{l:"Corporate / Relocation",p:34,c:"var(--blue)"},{l:"Leisure",p:22,c:"var(--gold)"}],signals:[{w:false,t:"<strong>UCF Health, Nemours, VA Hospital</strong> within 2 miles. Built-in extended-stay demand."},{w:false,t:"<strong>+18% population growth since 2020</strong> — one of fastest-growing master-planned communities in the US."},{w:false,t:"<strong>10 min from MCO</strong> — captures flight crews, international patients, corporate travelers."}]},
+  {id:4,name:"Kissimmee",abbr:"KSSM",tier:"s",score:86,lat:28.2920,lng:-81.4078,sz:66,rate:"$162",occ:"77%",rev:"$50,800",risk:"Moderate",verdict:"Highest raw revenue in the metro. Theme park proximity drives massive volume — watch ordinance evolution.",pills:["Theme Park Belt","Top Revenue","Watch: Ordinance"],hot:[0,1],metrics:[{v:"$162",l:"Avg Nightly",t:"↑ 9% YoY",d:"up"},{v:"77%",l:"Occupancy",t:"Stable",d:"fl"},{v:"$50,800",l:"Est. Annual Rev",t:"Top of metro",d:"up"},{v:"2.0 yrs",l:"Break-Even",t:"Strong",d:"up"}],demand:[{l:"Theme Park / Leisure",p:80,c:"var(--teal)"},{l:"Extended Family",p:14,c:"var(--gold)"},{l:"Sports Tourism",p:6,c:"var(--blue)"}],signals:[{w:false,t:"<strong>Walt Disney World — 4 miles.</strong> 58 million annual visitors. Demand floor is the world's largest."},{w:true,t:"<strong>New noise ordinance filing under review</strong> — monitor Osceola County agenda before committing."},{w:false,t:"<strong>ESPN Wide World of Sports</strong> drives year-round events independent of theme parks."}]},
+  {id:5,name:"Winter Park",abbr:"WPRK",tier:"a",score:82,lat:28.5997,lng:-81.3392,sz:54,rate:"$178",occ:"72%",rev:"$44,900",risk:"Low",verdict:"Affluent cultural enclave. Premium rates offset lower occupancy — but competition is increasing fast.",pills:["Premium Rates","Cultural Hub","Watch: Supply"],hot:[0,1],metrics:[{v:"$178",l:"Avg Nightly",t:"↑ 6% YoY",d:"up"},{v:"72%",l:"Occupancy",t:"↓ 2pts YoY",d:"dn"},{v:"$44,900",l:"Est. Annual Rev",t:"Stable",d:"fl"},{v:"2.6 yrs",l:"Break-Even",t:"Moderate",d:"fl"}],demand:[{l:"Affluent Leisure",p:52,c:"var(--blue)"},{l:"Arts / Cultural",p:28,c:"var(--gold)"},{l:"Business",p:20,c:"var(--teal)"}],signals:[{w:false,t:"<strong>Rollins College & Park Avenue</strong> — Morse Museum, gallery walks. Consistent high-spend visitors."},{w:true,t:"<strong>STR applications up 38% in 2025</strong> — competition growing fast. Timing advantage narrowing."},{w:false,t:"<strong>High walkability</strong> — restaurant and retail density keeps guests paying premium rates."}]},
+  {id:6,name:"Dr. Phillips",abbr:"DR.P",tier:"a",score:80,lat:28.4558,lng:-81.4956,sz:52,rate:"$155",occ:"74%",rev:"$42,100",risk:"Low",verdict:"Restaurant Row and upscale residential. Business traveler crossover with leisure. Underrated STR market.",pills:["Restaurant Row","Underrated","Business Crossover"],hot:[2],metrics:[{v:"$155",l:"Avg Nightly",t:"↑ 7% YoY",d:"up"},{v:"74%",l:"Occupancy",t:"↑ 3pts YoY",d:"up"},{v:"$42,100",l:"Est. Annual Rev",t:"Growing",d:"up"},{v:"2.5 yrs",l:"Break-Even",t:"Solid",d:"up"}],demand:[{l:"Business / Corporate",p:42,c:"var(--blue)"},{l:"Foodie / Leisure",p:38,c:"var(--gold)"},{l:"Arena Events",p:20,c:"var(--teal)"}],signals:[{w:false,t:"<strong>Restaurant Row — 50+ dining establishments</strong> walkable. Strong repeat visitor pattern."},{w:false,t:"<strong>Kia Center 8 min</strong> — NBA and concert demand spikes are predictable and bookable in advance."},{w:false,t:"<strong>Millenia corporate corridor</strong> — weekday occupancy elevated by business travelers."}]},
+  {id:7,name:"Celebration",abbr:"CELB",tier:"a",score:78,lat:28.3262,lng:-81.5454,sz:48,rate:"$168",occ:"70%",rev:"$42,800",risk:"Low",verdict:"Disney-planned community. Architectural consistency drives premium over Kissimmee. Limited supply is the moat.",pills:["Limited Supply","Premium Feel","Disney Adjacent"],hot:[0,1],metrics:[{v:"$168",l:"Avg Nightly",t:"↑ 5% YoY",d:"up"},{v:"70%",l:"Occupancy",t:"Stable",d:"fl"},{v:"$42,800",l:"Est. Annual Rev",t:"Stable",d:"fl"},{v:"2.7 yrs",l:"Break-Even",t:"Moderate",d:"fl"}],demand:[{l:"Disney / Family",p:65,c:"var(--teal)"},{l:"Extended Leisure",p:25,c:"var(--gold)"},{l:"Relocation",p:10,c:"var(--blue)"}],signals:[{w:false,t:"<strong>Disney master plan architecture</strong> — consistency and branding drives premium over nearby comps."},{w:false,t:"<strong>HOA restrictions limit STR supply</strong> — natural scarcity in some sections. Check CC&Rs."},{w:false,t:"<strong>Christmas season hits 95%+ occupancy</strong> — 6-month advance bookings standard."}]},
+  {id:8,name:"Downtown Orlando",abbr:"DTWN",tier:"a",score:76,lat:28.5383,lng:-81.3662,sz:46,rate:"$139",occ:"71%",rev:"$36,200",risk:"Moderate",verdict:"Urban core with high walkability. Event-driven demand is strong — but city-level STR review is pending.",pills:["Walk Score 88","Urban Core","Watch: Regs"],hot:[0],metrics:[{v:"$139",l:"Avg Nightly",t:"↑ 4% YoY",d:"up"},{v:"71%",l:"Occupancy",t:"Flat",d:"fl"},{v:"$36,200",l:"Est. Annual Rev",t:"Modest growth",d:"up"},{v:"2.9 yrs",l:"Break-Even",t:"Moderate",d:"fl"}],demand:[{l:"Event / Urban",p:48,c:"var(--blue)"},{l:"Business",p:32,c:"var(--teal)"},{l:"Weekend Leisure",p:20,c:"var(--gold)"}],signals:[{w:false,t:"<strong>Walk Score 88</strong> — most walkable area in Orlando. Appeals to guests wanting city experience."},{w:false,t:"<strong>Dr. Phillips Center</strong> — consistent performing arts calendar drives reliable mid-week demand."},{w:true,t:"<strong>City council STR density review Q3 2026</strong> — urban core permits under scrutiny."}]},
+  {id:9,name:"Sand Lake",abbr:"SLKE",tier:"b",score:72,lat:28.4201,lng:-81.4501,sz:44,rate:"$118",occ:"68%",rev:"$29,400",risk:"Low",verdict:"Solid airport-adjacent fundamentals. Steady demand without premium pricing power. Good mid-market hold.",pills:["Airport Adjacent","Steady Demand","Low Risk"],hot:[],metrics:[{v:"$118",l:"Avg Nightly",t:"Stable",d:"fl"},{v:"68%",l:"Occupancy",t:"Stable",d:"fl"},{v:"$29,400",l:"Est. Annual Rev",t:"Stable",d:"fl"},{v:"3.2 yrs",l:"Break-Even",t:"Moderate",d:"fl"}],demand:[{l:"Airport / Transit",p:40,c:"var(--blue)"},{l:"Business",p:35,c:"var(--teal)"},{l:"Leisure",p:25,c:"var(--gold)"}],signals:[{w:false,t:"<strong>MCO Airport 12 minutes</strong> — flight crew and transit demand creates a reliable occupancy floor."},{w:false,t:"<strong>Restaurant Row adjacency</strong> — guests extend stays for dining, improving average length."}]},
+  {id:10,name:"Sanford / Lake Mary",abbr:"SNFD",tier:"a",score:77,lat:28.7989,lng:-81.2731,sz:48,rate:"$124",occ:"73%",rev:"$33,200",risk:"Low",verdict:"North metro sleeper. Sanford Airport and SunRail access create mixed demand that most investors overlook.",pills:["Dual Airport","SunRail","Undervalued"],hot:[0,2],metrics:[{v:"$124",l:"Avg Nightly",t:"↑ 9% YoY",d:"up"},{v:"73%",l:"Occupancy",t:"↑ 5pts",d:"up"},{v:"$33,200",l:"Est. Annual Rev",t:"Strong growth",d:"up"},{v:"2.8 yrs",l:"Break-Even",t:"Improving",d:"up"}],demand:[{l:"Airport / Transit",p:38,c:"var(--blue)"},{l:"Historic Tourism",p:32,c:"var(--gold)"},{l:"Business",p:30,c:"var(--teal)"}],signals:[{w:false,t:"<strong>Sanford International (SFB)</strong> — charter hub especially for UK tourists bound for theme parks."},{w:false,t:"<strong>SunRail station</strong> — commuter rail to downtown Orlando. Genuinely transit-accessible."},{w:false,t:"<strong>Historic Downtown Sanford</strong> — boutique dining and First Friday events drive weekend demand."}]},
+  {id:11,name:"Altamonte Springs",abbr:"ALTA",tier:"b",score:68,lat:28.6611,lng:-81.3656,sz:42,rate:"$102",occ:"65%",rev:"$24,800",risk:"Low",verdict:"North corridor entry market. Lower ceiling but also lowest acquisition cost. Good first-time investor play.",pills:["Entry Market","Low Price","First-Timer Friendly"],hot:[2],metrics:[{v:"$102",l:"Avg Nightly",t:"↑ 3% YoY",d:"up"},{v:"65%",l:"Occupancy",t:"Stable",d:"fl"},{v:"$24,800",l:"Est. Annual Rev",t:"Modest",d:"up"},{v:"3.5 yrs",l:"Break-Even",t:"Acceptable",d:"fl"}],demand:[{l:"Suburban / Family",p:50,c:"var(--gold)"},{l:"Business",p:35,c:"var(--blue)"},{l:"Leisure",p:15,c:"var(--teal)"}],signals:[{w:false,t:"<strong>Suburban school district quality</strong> — family relocation creates extended-stay bookings."},{w:false,t:"<strong>Median buy price $248K</strong> — most accessible entry point in the metro for new investors."}]},
+  {id:12,name:"Oviedo",abbr:"OVD",tier:"b",score:71,lat:28.6700,lng:-81.1984,sz:40,rate:"$108",occ:"66%",rev:"$26,400",risk:"Low",verdict:"UCF-adjacent suburb with a young family demographic. Growing retail scene driving leisure demand.",pills:["UCF Adjacent","Young Demo","Growing"],hot:[0],metrics:[{v:"$108",l:"Avg Nightly",t:"↑ 6% YoY",d:"up"},{v:"66%",l:"Occupancy",t:"↑ 3pts",d:"up"},{v:"$26,400",l:"Est. Annual Rev",t:"Growing",d:"up"},{v:"3.1 yrs",l:"Break-Even",t:"Improving",d:"up"}],demand:[{l:"University Adjacent",p:45,c:"var(--blue)"},{l:"Young Family",p:35,c:"var(--gold)"},{l:"Sports / Events",p:20,c:"var(--teal)"}],signals:[{w:false,t:"<strong>UCF spillover</strong> — parent visits, faculty stays, and student overflow create reliable bookings."},{w:false,t:"<strong>Top-rated school district</strong> — family relocation extended stays during school transition periods."}]},
+  {id:13,name:"Pine Hills",abbr:"PINE",tier:"b",score:64,lat:28.5716,lng:-81.4412,sz:38,rate:"$88",occ:"62%",rev:"$20,200",risk:"Low",verdict:"Emerging market. Low entry cost with improving infrastructure. Long hold play, not immediate yield.",pills:["Emerging","Low Entry","Long Hold"],hot:[],metrics:[{v:"$88",l:"Avg Nightly",t:"Flat",d:"fl"},{v:"62%",l:"Occupancy",t:"↑ 2pts",d:"up"},{v:"$20,200",l:"Est. Annual Rev",t:"Early stage",d:"up"},{v:"4.2 yrs",l:"Break-Even",t:"Developing",d:"fl"}],demand:[{l:"Local / Regional",p:60,c:"var(--gold)"},{l:"Workforce",p:30,c:"var(--blue)"},{l:"Leisure",p:10,c:"var(--teal)"}],signals:[{w:false,t:"<strong>2025 infrastructure investment announced</strong> — road and utility upgrades signal appreciation play."},{w:false,t:"<strong>Entry below $200K possible</strong> — lowest acquisition cost in metro. Risk-adjusted for long hold."}]},
+  {id:14,name:"Apopka",abbr:"APKA",tier:"c",score:58,lat:28.6755,lng:-81.5323,sz:36,rate:"$92",occ:"59%",rev:"$18,400",risk:"Moderate",verdict:"Limited demand anchors. Primarily workforce and local demand. STR upside is constrained at current prices.",pills:["Limited Anchors","Workforce Focus","Monitor"],hot:[],metrics:[{v:"$92",l:"Avg Nightly",t:"Flat",d:"fl"},{v:"59%",l:"Occupancy",t:"↓ 1pt",d:"dn"},{v:"$18,400",l:"Est. Annual Rev",t:"Declining",d:"dn"},{v:"4.6 yrs",l:"Break-Even",t:"Weak",d:"dn"}],demand:[{l:"Workforce / Local",p:70,c:"var(--text3)"},{l:"Family / Budget",p:20,c:"var(--gold)"},{l:"Leisure",p:10,c:"var(--teal)"}],signals:[{w:true,t:"<strong>No university, major employer, or tourism draw</strong> within 15 miles. Demand base is thin."},{w:true,t:"<strong>Occupancy declining</strong> — increasing supply against flat demand. Not recommended at current pricing."}]}
+];
+
+// ── STATE ──
+let emailUnlocked=false;
+let activePlan=2;
+let hoveredId=null;
+let activeId=null;
+let pinnedIds=[];
+const MAX_PINS=3;
+
+// ── HELPERS ──
+function tColor(t){return t==='s'?'var(--teal)':t==='a'?'var(--blue)':t==='b'?'var(--gold)':'var(--amber)'}
+function tLabel(t){return t==='s'?'S-Tier · Elite':t==='a'?'A-Tier · Strong':t==='b'?'B-Tier · Moderate':'C-Tier · Caution'}
+function tRGB(t){return t==='s'?'26,184,138':t==='a'?'46,127,255':t==='b'?'200,146,42':'217,119,6'}
+
+// ── MAP INIT ──
+const map=L.map('map',{center:[28.52,-81.38],zoom:11,zoomControl:true});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+  attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  subdomains:'abcd',maxZoom:19
+}).addTo(map);
+
+// ── HEAT GLOW ──
+const gr={s:3000,a:2400,b:2000,c:1600};
+const go={s:0.12,a:0.09,b:0.08,c:0.06};
+N.forEach(n=>{
+  L.circle([n.lat,n.lng],{radius:gr[n.tier],color:'transparent',fillColor:tColor(n.tier).replace('var(--','').replace(')',''),fillOpacity:go[n.tier],interactive:false}).addTo(map);
+});
+
+// Better glow with actual hex colors
+const glowHex={s:'#1ab88a',a:'#2e7fff',b:'#c8922a',c:'#d97706'};
+N.forEach(n=>{
+  L.circle([n.lat,n.lng],{radius:gr[n.tier],color:'transparent',fillColor:glowHex[n.tier],fillOpacity:go[n.tier],interactive:false}).addTo(map);
+  L.circle([n.lat,n.lng],{radius:gr[n.tier]*0.4,color:'transparent',fillColor:glowHex[n.tier],fillOpacity:go[n.tier]*1.8,interactive:false}).addTo(map);
+});
+
+// ── MARKERS ──
+const markerEls={};
+N.forEach(n=>{
+  const el=document.createElement('div');
+  el.className=`nbhd-bubble nb-${n.tier}`;
+  el.style.cssText=`width:${n.sz}px;height:${n.sz}px`;
+  el.innerHTML=`<span class="nb-score" style="font-size:${Math.round(n.sz*.28)}px;color:${glowHex[n.tier]}">${n.score}</span><span class="nb-abbr" style="font-size:${Math.round(n.sz*.13)}px">${n.abbr}</span>`;
+
+  const icon=L.divIcon({html:el.outerHTML,className:'',iconSize:[n.sz,n.sz],iconAnchor:[n.sz/2,n.sz/2]});
+  const marker=L.marker([n.lat,n.lng],{icon,zIndexOffset:n.score}).addTo(map);
+  markerEls[n.id]=marker;
+
+  marker.on('mouseover',()=>showStrip(n.id));
+  marker.on('mouseout',()=>{if(activeId!==n.id)hideStrip()});
+  marker.on('click',()=>handleMarkerClick(n.id));
+});
+
+// ── STRIP CARD ──
+function showStrip(id){
+  const n=N.find(x=>x.id===id);
+  hoveredId=id;
+  const c=document.getElementById('stripCard');
+  document.getElementById('sc-score').textContent=n.score;
+  document.getElementById('sc-score').style.color=glowHex[n.tier];
+  document.getElementById('sc-name').textContent=n.name;
+  document.getElementById('sc-meta').innerHTML=
+    `<span>${n.rate} avg nightly</span><span>${n.occ} occupancy</span><span style="color:${n.risk==='Low'?'var(--teal)':'var(--amber)'}">${n.risk} risk</span>`;
+  const pb=document.getElementById('sc-pin-btn');
+  const isPinned=pinnedIds.includes(id);
+  pb.textContent=isPinned?'&#10003;':'＋';
+  pb.className='sc-pin-btn'+(isPinned?' pinned':'');
+  c.classList.add('show');
+}
+function hideStrip(){
+  if(!hoveredId)return;
+  document.getElementById('stripCard').classList.remove('show');
+  hoveredId=null;
+}
+function handleStripClick(){
+  if(hoveredId) handleMarkerClick(hoveredId);
+}
+
+// ── MARKER CLICK ──
+function handleMarkerClick(id){
+  if(!emailUnlocked){window._pendingId=id;openEmail();return;}
+  showDetail(id);
+}
+
+// ── PIN / COMPARE ──
+function handlePinClick(e){
+  e.stopPropagation();
+  const id=hoveredId;
+  if(!id)return;
+  if(!emailUnlocked){window._pendingId=null;openEmail();return;}
+  if(pinnedIds.includes(id)){
+    pinnedIds=pinnedIds.filter(x=>x!==id);
+  } else {
+    if(pinnedIds.length>=MAX_PINS)return;
+    pinnedIds.push(id);
+  }
+  updateComparebar();
+  showStrip(id);
+}
+
+function updateComparebar(){
+  const bar=document.getElementById('compareBar');
+  const slots=document.getElementById('cbSlots');
+  const btn=document.getElementById('cbBtn');
+  if(pinnedIds.length===0){bar.classList.remove('show');return;}
+  bar.classList.add('show');
+  slots.innerHTML='';
+  pinnedIds.forEach(id=>{
+    const n=N.find(x=>x.id===id);
+    const slot=document.createElement('div');
+    slot.className='cb-slot filled';
+    slot.innerHTML=`<span style="color:${glowHex[n.tier]};font-family:var(--mono);font-size:11px;font-weight:500">${n.score}</span> ${n.name} <span class="cb-x" onclick="unpin(${id})">&#10005;</span>`;
+    slots.appendChild(slot);
+  });
+  btn.disabled=pinnedIds.length<2;
+}
+
+function unpin(id){
+  pinnedIds=pinnedIds.filter(x=>x!==id);
+  updateComparebar();
+}
+
+// ── SHOW DETAIL ──
+function showDetail(id){
+  const n=N.find(x=>x.id===id);
+  if(!n)return;
+  activeId=id;
+
+  document.getElementById('d-name').textContent=n.name;
+  const sc=document.getElementById('d-score');
+  sc.textContent=n.score; sc.style.color=glowHex[n.tier];
+
+  const tier=document.getElementById('d-tier');
+  tier.textContent=tLabel(n.tier);
+  tier.style.cssText=`color:${glowHex[n.tier]};background:rgba(${tRGB(n.tier)},0.12);border:1px solid rgba(${tRGB(n.tier)},0.25)`;
+
+  document.getElementById('d-verdict').textContent=n.verdict;
+
+  // Tags
+  const tags=document.getElementById('d-tags');tags.innerHTML='';
+  n.pills.forEach((p,i)=>{
+    const s=document.createElement('span');
+    s.className='dtag'+(n.hot.includes(i)?' hot':'');
+    s.textContent=p;tags.appendChild(s);
+  });
+
+  // Metrics
+  const mg=document.getElementById('d-metrics');mg.innerHTML='';
+  n.metrics.forEach(m=>{
+    const b=document.createElement('div');b.className='kn-box';
+    const tClass=m.d==='up'?'trend-up':m.d==='dn'?'trend-dn':'trend-fl';
+    b.innerHTML=`<div class="kn-val">${m.v}</div><div class="kn-label">${m.l}</div><div class="kn-trend ${tClass}">${m.t}</div>`;
+    mg.appendChild(b);
+  });
+
+  // Demand
+  const dd=document.getElementById('d-demand');dd.innerHTML='';
+  n.demand.forEach(d=>{
+    const el=document.createElement('div');el.className='demand-bar';
+    el.innerHTML=`<div class="db-row"><span class="db-label">${d.l}</span><span class="db-val">${d.p}%</span></div><div class="db-track"><div class="db-fill" style="width:${d.p}%;background:${d.c}"></div></div>`;
+    dd.appendChild(el);
+  });
+
+  // Signals
+  const sl=document.getElementById('d-signals');sl.innerHTML='';
+  n.signals.forEach(s=>{
+    const el=document.createElement('div');el.className='signal-item';
+    const ico=s.w
+      ?`<svg viewBox="0 0 10 10" fill="none"><path d="M5 1L9 9H1L5 1Z" stroke="var(--amber)" stroke-width="1.2"/></svg>`
+      :`<svg viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="3.5" stroke="var(--gold)" stroke-width="1.2"/><circle cx="5" cy="5" r="1" fill="var(--gold)"/></svg>`;
+    el.innerHTML=`<div class="signal-ico">${ico}</div><div class="signal-text">${s.t}</div>`;
+    sl.appendChild(el);
+  });
+
+  // Switch panels
+  document.getElementById('rpHome').style.display='none';
+  document.getElementById('rpCompare').style.display='none';
+  const det=document.getElementById('rpDetail');
+  det.style.display='flex';
+  document.querySelector('.detail-scroll').scrollTop=0;
+
+  map.flyTo([n.lat,n.lng],13,{duration:0.7});
+}
+
+// ── COMPARE VIEW ──
+function openCompare(){
+  if(pinnedIds.length<2)return;
+  const ns=pinnedIds.map(id=>N.find(x=>x.id===id));
+  const cols=ns.length;
+  const scroll=document.getElementById('compareScroll');
+  scroll.innerHTML='';
+
+  // Header row
+  const hdr=document.createElement('div');
+  hdr.className='compare-col-headers';
+  hdr.style.gridTemplateColumns=`repeat(${cols},1fr)`;
+  ns.forEach(n=>{
+    const c=document.createElement('div');c.className='cch';
+    c.innerHTML=`<span style="font-size:12px">${n.name}</span><span class="cch-score" style="color:${glowHex[n.tier]}">${n.score}</span>`;
+    hdr.appendChild(c);
+  });
+  scroll.appendChild(hdr);
+
+  // Metric rows
+  const rowDefs=[
+    {label:'Avg Nightly Rate',key:'rate'},
+    {label:'Occupancy',key:'occ'},
+    {label:'Est. Annual Revenue',key:'rev'},
+    {label:'Ordinance Risk',key:'risk'},
+  ];
+  rowDefs.forEach(rd=>{
+    const row=document.createElement('div');row.className='compare-row';
+    const lbl=document.createElement('div');lbl.className='cr-label';lbl.textContent=rd.label;
+    row.appendChild(lbl);
+    const cells=document.createElement('div');
+    cells.className='cr-cells';
+    cells.style.gridTemplateColumns=`repeat(${cols},1fr)`;
+    ns.forEach(n=>{
+      const cell=document.createElement('div');cell.className='cr-cell';
+      cell.innerHTML=`<div class="cr-val">${n[rd.key]}</div>`;
+      cells.appendChild(cell);
+    });
+    row.appendChild(cells);
+    scroll.appendChild(row);
+  });
+
+  document.getElementById('rpHome').style.display='none';
+  document.getElementById('rpDetail').style.display='none';
+  document.getElementById('rpCompare').style.display='flex';
+  map.flyTo([28.52,-81.38],11,{duration:0.7});
+}
+
+function showHome(){
+  document.getElementById('rpHome').style.display='flex';
+  document.getElementById('rpDetail').style.display='none';
+  document.getElementById('rpCompare').style.display='none';
+  activeId=null;
+  map.flyTo([28.52,-81.38],11,{duration:0.7});
+}
+
+// ── EMAIL ──
+function openEmail(){document.getElementById('emailModal').classList.add('open')}
+function submitEmail(){
+  const e=document.getElementById('ei-email').value;
+  const r=document.getElementById('ei-role').value;
+  if(!e||!r){alert('Please fill in all fields.');return;}
+  emailUnlocked=true;
+  closeModal('emailModal');
+  if(window._pendingId){showDetail(window._pendingId);window._pendingId=null;}
+}
+
+// ── PRICING ──
+function openPricing(){
+  document.getElementById('pricingView').style.display='block';
+  document.getElementById('successView').style.display='none';
+  document.getElementById('pricingModal').classList.add('open');
+}
+function selectPlan(n){
+  activePlan=n;
+  document.getElementById('pt1').classList.toggle('sel',n===1);
+  document.getElementById('pt2').classList.toggle('sel',n===2);
+  document.getElementById('pi-price').textContent=n===1?'$129':'$249';
+}
+function submitOrder(){
+  const e=document.getElementById('pi-email').value;
+  if(!e){alert('Please enter your email.');return;}
+  emailUnlocked=true;
+  document.getElementById('pricingView').style.display='none';
+  document.getElementById('successView').style.display='block';
+  const d=new Date();d.setDate(d.getDate()+90);
+  document.getElementById('expiryDate').textContent=d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const tid=activeId||window._pendingId;
+  if(tid){setTimeout(()=>{closeModal('pricingModal');showDetail(tid);},2200);}
+}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+['emailModal','pricingModal'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeModal(id);});
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal('emailModal');closeModal('pricingModal');}});
+</script>
+
+</body>
+</html>
